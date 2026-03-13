@@ -1,7 +1,8 @@
 export const runtime = "nodejs"; 
 import { NextResponse } from "next/server";
-import Order from "@/models/Order";
-import { connectDB } from "@/lib/mongodb";
+import { connectDB } from "../../../../../lib/mongodb";
+import Order from "../../../../../models/Order";
+;
 
 // GET order by id
 export async function GET(req, context) {
