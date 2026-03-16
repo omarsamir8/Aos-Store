@@ -7,11 +7,14 @@ import { Field, Form, Formik } from "formik";
 import Cookies from "js-cookie";
 import Swal from "sweetalert2";
 import { useDeleteProduct, useProducts } from "./ProductQuery";
+import Loading from "../Loader/Loader";
 
 function Products() {
+
   const queryClient = useQueryClient();
-  const { data: products, isLoading, error } = useProducts();
+  const { data: products = [], isLoading, error } = useProducts();
   const deleteMutation = useDeleteProduct();
+
   const [editingProduct, setEditingProduct] = useState(null);
 
   const initialValues = editingProduct || {
@@ -27,7 +30,9 @@ function Products() {
   // CREATE PRODUCT
   const addProduct = useMutation({
     mutationFn: async (values) => {
+
       const token = Cookies.get("token");
+
       const formData = new FormData();
       formData.append("name", values.name);
       formData.append("description", values.description);
@@ -47,21 +52,14 @@ function Products() {
     },
 
     onSuccess: () => {
-      Swal.fire({
-        title: "Success!",
-        text: "Product added successfully.",
-        icon: "success",
-      });
+      Swal.fire("Success!", "Product added successfully.", "success");
       queryClient.invalidateQueries(["products"]);
     },
 
     onError: () => {
-      Swal.fire({
-        title: "Error!",
-        text: "Failed to add product.",
-        icon: "error",
-      });
+      Swal.fire("Error!", "Failed to add product.", "error");
     },
+
   });
 
   // UPDATE PRODUCT
@@ -92,21 +90,14 @@ function Products() {
     },
 
     onSuccess: () => {
-      Swal.fire({
-        title: "Updated!",
-        text: "Product updated successfully.",
-        icon: "success",
-      });
+      Swal.fire("Updated!", "Product updated successfully.", "success");
       queryClient.invalidateQueries(["products"]);
     },
 
     onError: () => {
-      Swal.fire({
-        title: "Error!",
-        text: "Failed to update product.",
-        icon: "error",
-      });
+      Swal.fire("Error!", "Failed to update product.", "error");
     },
+
   });
 
   const onSubmit = (values, { resetForm }) => {
@@ -126,39 +117,56 @@ function Products() {
     } else {
 
       addProduct.mutate(values, {
-        onSuccess: () => {
-          resetForm();
-        },
+        onSuccess: () => resetForm(),
       });
 
     }
+
   };
 
   // DELETE PRODUCT
   const handleDelete = (id) => {
+
     Swal.fire({
       title: "Are you sure?",
-      text: "You won't be able to revert this!",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete it!",
-      cancelButtonText: "Cancel",
     }).then((result) => {
-      if (result.isConfirmed) {
-        deleteMutation.mutate(id);
 
-        Swal.fire("Deleted!", "Product has been deleted.", "success");
+      if (result.isConfirmed) {
+
+        deleteMutation.mutate(id, {
+          onSuccess: () => {
+            Swal.fire("Deleted!", "Product has been deleted.", "success");
+          },
+        });
+
       }
+
     });
+
   };
 
-  if (isLoading) return <h2 className="text-center mt-10">Loading...</h2>;
-  if (error) return <h2 className="text-center mt-10 text-red-500">Error loading Products</h2>;
+  if (isLoading)
+    return <h2 className="text-center mt-10 font-bold">Loading...</h2>;
+
+  if (error)
+    return (
+      <h2 className="text-center mt-10 text-red-500">
+        Error loading Products
+      </h2>
+    );
 
   return (
     <div>
+
+      
+      {(addProduct.isPending ||
+        updateProduct.isPending ||
+        deleteMutation.isPending) && (
+        <Loading/>
+      )}
+
       <div className="form w-full m-auto pr-4 pt-4">
         <Formik
           initialValues={initialValues}
@@ -166,48 +174,16 @@ function Products() {
           onSubmit={onSubmit}
         >
           {({ setFieldValue }) => (
-            <Form className="flex flex-col gap-4 justify-center align-middle">
+            <Form className="flex flex-col gap-4">
               <h2 className="font-bold text-2xl">
                 {editingProduct ? "Update Product" : "Create New Product"}
               </h2>
-
-              <Field
-                name="name"
-                type="text"
-                placeholder="Product Name"
-                className="bg-blue-100 p-2 rounded-md"
-              />
-              <Field
-                name="description"
-                type="text"
-                placeholder="Product description"
-                className="bg-blue-100 p-2 rounded-md"
-              />
-              <Field
-                name="price"
-                type="text"
-                placeholder="Product price"
-                className="bg-blue-100 p-2 rounded-md"
-              />
-
-              <Field
-                name="priceBeforeSale"
-                type="text"
-                placeholder="Product price Before Sale"
-                className="bg-blue-100 p-2 rounded-md"
-              />
-              <Field
-                name="brand"
-                type="text"
-                placeholder="Product brand"
-                className="bg-blue-100 p-2 rounded-md"
-              />
-              <Field
-                name="category"
-                type="text"
-                placeholder="Product category"
-                className="bg-blue-100 p-2 rounded-md"
-              />
+              <Field name="name" type="text" placeholder="Product Name" className="bg-blue-100 p-2 rounded-md"/>
+              <Field name="description" type="text" placeholder="Product description" className="bg-blue-100 p-2 rounded-md"/>
+              <Field name="price" type="text" placeholder="Product price" className="bg-blue-100 p-2 rounded-md"/>
+              <Field name="priceBeforeSale" type="text" placeholder="Product price Before Sale" className="bg-blue-100 p-2 rounded-md"/>
+              <Field name="brand" type="text" placeholder="Product brand" className="bg-blue-100 p-2 rounded-md"/>
+              <Field name="category" type="text" placeholder="Product category" className="bg-blue-100 p-2 rounded-md"/>
               <input
                 type="file"
                 className="bg-blue-100 p-2 rounded-md"
@@ -215,22 +191,24 @@ function Products() {
                   setFieldValue("imageFile", e.currentTarget.files[0]);
                 }}
               />
-
               <button
                 type="submit"
-                className="bg-blue-200 p-2 rounded-md cursor-pointer font-bold"
+                className="bg-blue-500 text-white p-2 rounded-md flex justify-center items-center gap-2"
               >
-                {editingProduct ? "Update Product" : "Create New Product"}
+                {(addProduct.isPending || updateProduct.isPending) ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  editingProduct ? "Update Product" : "Create New Product"
+                )}
               </button>
-
             </Form>
-
           )}
         </Formik>
       </div>
+
       <h2 className="font-bold text-2xl pt-4">All Products</h2>
-      <div className="table-wrapper w-full p-4 pl-0 ">
-        <table className="w-full p-4 border border-gray-300">
+      <div className="table-wrapper w-full p-4 pl-0">
+        <table className="w-full border border-gray-300">
           <thead className="bg-blue-100">
             <tr>
               <th className="p-2">Image</th>
@@ -246,46 +224,39 @@ function Products() {
             {products.length > 0 ? (
               products.map((p) => (
                 <tr key={p._id} className="hover:bg-gray-100">
-
                   <td className="p-2">
-                    <img
-                      src={p.image || "/no-image.png"}
-                      alt={p.name}
-                      className="m-auto"
-                      width={50}
-                      height={50}
-                    />
+                    <img src={p.image || "/no-image.png"} alt={p.name} className="m-auto" width={50} height={50}/>
                   </td>
                   <td className="p-2">{p.name}</td>
                   <td className="p-2">{p.brand}</td>
                   <td className="p-2">{p.category}</td>
                   <td className="p-2">${p.price}</td>
                   <td className="p-2">
-                    <del className="text-red-600">
-                      ${p.priceBeforeSale}
-                    </del>
+                    <del className="text-red-600">${p.priceBeforeSale}</del>
                   </td>
-                  <td className="p-2 space-x-2">
+                  <td className="p-2 flex gap-2 space-x-2">
                     <button
                       onClick={() => setEditingProduct(p)}
-                      className="pt-2 pr-6 pb-2 pl-6 rounded bg-green-500 text-white cursor-pointer"
+                      className="px-6 cursor-pointer py-2 rounded bg-green-500 text-white"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => handleDelete(p._id)}
-                      className="pt-2 pr-6 pb-2 pl-6 rounded bg-red-600 text-white cursor-pointer"
+                      className="px-6 cursor-pointer py-2 rounded bg-red-600 text-white flex items-center gap-2 justify-center"
                     >
-                      Delete
+                      {deleteMutation.isPending ? (
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        "Delete"
+                      )}
                     </button>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan="7" className="border p-4">
-                  No products found
-                </td>
+                <td colSpan="7" className="p-4">No products found</td>
               </tr>
             )}
           </tbody>
